@@ -52,7 +52,7 @@ namespace gr {
                     break;
                 case Alpha:
                     if (d_pager_lang == Chinese) {
-                        preprocess_chinese_alpha_message(&d_message);
+                        preprocess_chinese_message(&d_message);
                     }
                     make_alpha_message(d_message, msgwords);
                     functionbits = 3;

@@ -211,7 +211,7 @@ namespace gr {
         #define SHIFT_OUT 0xE           // for GB2312 Chinese Characters
         #define SHIFT_IN 0xF            // for ASCII
         void
-        preprocess_chinese_alpha_message(std::string *message) {
+        preprocess_chinese_message(std::string *message) {
             int prev_shift_in = -1, shift_in;
             string msg_gb2312 = boost::locale::conv::between(*message, "GB2312", "UTF-8");
             

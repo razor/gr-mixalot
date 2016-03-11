@@ -20,7 +20,7 @@ namespace gr {
         void gr_uint32o_bvec(gr_uint32 d, bvec &bv, int nbits = 32);
         gr_uint32 bvec_to_uint32(const bvec &bv);
         unsigned char even_parity(gr_uint32 x);
-        void preprocess_chinese_alpha_message(std::string *message);
+        void preprocess_chinese_message(std::string *message);
     }
 }
 
