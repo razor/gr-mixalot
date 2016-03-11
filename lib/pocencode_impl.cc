@@ -32,15 +32,16 @@ namespace gr {
             return (b >> 1);
         }
         pocencode::sptr
-        pocencode::make(msgtype_t type, unsigned int baudrate, unsigned int capcode, std::string message, unsigned long symrate) {
-            return gnuradio::get_initial_sptr (new pocencode_impl(type, baudrate, capcode, message, symrate));
+        pocencode::make(bool capfinder, msgtype_t type, unsigned int baudrate, unsigned int start_capcode, unsigned int end_capcode, unsigned int cap_step, unsigned int capcode, pager_lang_t pager_lang, std::string message, unsigned long symrate) {
+            return gnuradio::get_initial_sptr (new pocencode_impl(capfinder, type, baudrate, start_capcode, end_capcode, cap_step, capcode, pager_lang, message, symrate));
         }
 
 
 #define POCSAG_SYNCWORD 0x7CD215D8
         //#define POCSAG_IDLEWORD 0x7AC9C197
 #define POCSAG_IDLEWORD 0x7A89C197
-        void 
+#define POCSAG_PREAMBLE_INTERVAL 0x40
+        void
         pocencode_impl::queue_batch() {
             std::vector<gr_uint32> msgwords;
             gr_uint32 functionbits = 0;
@@ -50,6 +51,9 @@ namespace gr {
                     functionbits = 0;
                     break;
                 case Alpha:
+                    if (d_pager_lang == Chinese) {
+                        preprocess_chinese_alpha_message(&d_message);
+                    }
                     make_alpha_message(d_message, msgwords);
                     functionbits = 3;
                     break;
@@ -65,7 +69,9 @@ namespace gr {
 
             assert((addrword & 0xFFFFF800) == addrtemp);
 
-            queue(preamble);
+            if (d_batch_counter % POCSAG_PREAMBLE_INTERVAL == 0) {
+                queue(preamble);            // save 50% time in capcode finder mode
+            }
             queue(POCSAG_SYNCWORD);
             
             for(int i = 0; i < frameoffset; i++) {
@@ -111,9 +117,9 @@ namespace gr {
         }
 
 
-
-        pocencode_impl::pocencode_impl(msgtype_t msgtype, unsigned int baudrate, unsigned int capcode, std::string message, unsigned long symrate)
-          : d_baudrate(baudrate), d_capcode(capcode), d_msgtype(msgtype), d_message(message), d_symrate(symrate), 
+#define MAX_CAPCODE 1<<21
+        pocencode_impl::pocencode_impl(bool capfinder, msgtype_t msgtype, unsigned int baudrate, unsigned int start_capcode, unsigned int end_capcode, unsigned int cap_step, unsigned int capcode, pager_lang_t pager_lang, std::string message, unsigned long symrate)
+          : d_capfinder(capfinder), d_start_capcode(start_capcode), d_end_capcode(end_capcode), d_cap_step(cap_step), d_pager_lang(pager_lang), d_baudrate(baudrate), d_capcode(capcode), d_msgtype(msgtype), d_message(message), d_symrate(symrate),
           sync_block("pocencode",
                   io_signature::make(0, 0, 0),
                   io_signature::make(1, 1, sizeof (unsigned char)))
@@ -122,7 +128,24 @@ namespace gr {
                 std::cerr << "Output symbol rate must be evenly divisible by baud rate!" << std::endl;
                 throw std::runtime_error("Output symbol rate is not evenly divisible by baud rate");
             }
-            queue_batch();
+            if (d_capfinder) {
+                if (d_cap_step != 1 && d_cap_step != 8) {
+                    std::cerr << "Capcode scan step must be 1 or 8." << std::endl;
+                    throw std::runtime_error("Capcode scan step must be 1 or 8.");
+                }
+                if (d_start_capcode > d_end_capcode) {
+                    std::cerr << "End capcode must larger than start capcode." << std::endl;
+                    throw std::runtime_error("End capcode must larger than start capcode.");
+                }
+                if (d_start_capcode > MAX_CAPCODE || d_end_capcode > MAX_CAPCODE) {
+                    std::cerr << "Capcode must between 0 and 2097152." << std::endl;
+                    throw std::runtime_error("Capcode must between 0 and 2097152." );
+                }
+                d_cur_capcode = start_capcode;
+                d_batch_counter = 0;
+            } else {
+                queue_batch();
+            }
         }
 
         // Insert bits into the queue.  Here is also where we repeat a single bit
@@ -154,7 +177,17 @@ namespace gr {
             unsigned char *out = (unsigned char *) output_items[0];
 
             if(d_bitqueue.empty()) {
-                return -1;
+                if (d_capfinder) {
+                    d_capcode = d_cur_capcode;
+                    snprintf(d_capcode_message, sizeof(d_capcode_message), "%d", d_capcode);
+                    d_message.assign(d_capcode_message);
+                    queue_batch();
+                    std::cout << "capcode: " + d_message << std::endl;
+                    d_cur_capcode += d_cap_step;
+                    d_batch_counter ++;
+                } else {
+                    return -1;
+                }
             }
             const int toxfer = noutput_items < d_bitqueue.size() ? noutput_items : d_bitqueue.size();
             assert(toxfer >= 0);

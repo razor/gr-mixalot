@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <boost/locale.hpp>
 #include "utils.h"
 
 using namespace itpp;
@@ -205,6 +206,25 @@ namespace gr {
                 assert((msgword & 0xFFFFF800) == msgtemp);      // sanity
                 msgwords.push_back(msgword);
             }
+        }
+
+        #define SHIFT_OUT 0xE           // for GB2312 Chinese Characters
+        #define SHIFT_IN 0xF            // for ASCII
+        void
+        preprocess_chinese_alpha_message(std::string *message) {
+            int prev_shift_in = -1, shift_in;
+            string msg_gb2312 = boost::locale::conv::between(*message, "GB2312", "UTF-8");
+            
+            for (int i=0; i < msg_gb2312.length(); i ++) {
+                shift_in = (msg_gb2312[i] < 0) ? SHIFT_OUT : SHIFT_IN;
+                if (shift_in != prev_shift_in) {
+                    msg_gb2312.insert(i, 1, shift_in);
+                    prev_shift_in = shift_in;
+                    i++;
+                }
+                msg_gb2312[i] &= 0x7F;
+            }
+            message->assign(msg_gb2312);
         }
     }
 }

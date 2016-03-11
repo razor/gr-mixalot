@@ -4,7 +4,20 @@
   <key>mixalot_pocencode</key>
   <category>mixalot</category>
   <import>import mixalot</import>
-  <make>mixalot.pocencode($type, $baudrate, $capcode, $msg, $symrate)</make>
+  <make>mixalot.pocencode($capfinder, $type, $baudrate, $start_capcode, $end_capcode, $cap_step, $capcode, $pager_lang, $msg, $symrate)</make>
+    <param>
+        <name>Cap finder mode</name>
+        <key>capfinder</key>
+        <type>bool</type>
+        <option>
+            <name>Off</name>
+            <key>False</key>
+        </option>
+        <option>
+            <name>On</name>
+            <key>True</key>
+        </option>
+    </param>
     <param>
         <name>Message Type</name>
         <key>type</key>
@@ -24,9 +37,45 @@
         <type>int</type>
     </param>
     <param>
+        <name>Start Capcode</name>
+        <key>start_capcode</key>
+        <type>int</type>
+    </param>
+    <param>
+        <name>End Capcode</name>
+        <key>end_capcode</key>
+        <type>int</type>
+    </param>
+    <param>
+        <name>Finder Step</name>
+        <key>cap_step</key>
+        <type>int</type>
+        <option>
+            <name>1</name>
+            <key>1</key>
+        </option>
+        <option>
+            <name>8</name>
+            <key>8</key>
+        </option>
+    </param>
+    <param>
         <name>Capcode</name>
         <key>capcode</key>
         <type>int</type>
+    </param>
+    <param>
+        <name>Pager language</name>
+        <key>pager_lang</key>
+        <type>enum</type>
+        <option>
+            <name>English</name>
+            <key>0</key>
+        </option>
+        <option>
+            <name>Chinese</name>
+            <key>1</key>
+        </option>
     </param>
     <param>
         <name>Message</name>
