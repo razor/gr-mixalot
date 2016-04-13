@@ -184,6 +184,7 @@ namespace gr {
                     queue_batch();
                     std::cout << "capcode: " + d_message << std::endl;
                     d_cur_capcode += d_cap_step;
+                    if (d_cur_capcode > d_end_capcode) return -1;
                     d_batch_counter ++;
                 } else {
                     return -1;
